@@ -83,9 +83,11 @@ export default function ConversationSidebar({
                                 onClick={() => onSelectConversation(conversation.id)}
                             >
                                 <MessageSquare className="h-4 w-4 flex-shrink-0 text-gray-500" />
-                                <div className="flex-1 overflow-hidden">
+                                <div className="flex-1 min-w-0">
                                     <p className="font-medium truncate">
-                                        {conversation.title || 'Untitled Chat'}
+                                        {(conversation.title || 'Untitled Chat').length > 30
+                                            ? `${(conversation.title || 'Untitled Chat').substring(0, 30)}...`
+                                            : (conversation.title || 'Untitled Chat')}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
                                         {format(new Date(conversation.updated_at), 'MMM d, HH:mm')}
@@ -94,7 +96,7 @@ export default function ConversationSidebar({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                                    className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 flex-shrink-0"
                                     onClick={(e) => handleDelete(e, conversation.id)}
                                     disabled={deletingId === conversation.id}
                                 >

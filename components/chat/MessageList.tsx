@@ -16,7 +16,15 @@ export default function MessageList({ messages, isLoading, streamingMessage }: M
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Scroll to bottom within the container only
+        if (scrollRef.current) {
+            // Use requestAnimationFrame to ensure DOM has updated
+            requestAnimationFrame(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+            });
+        }
     }, [messages, streamingMessage]);
 
     if (isLoading) {

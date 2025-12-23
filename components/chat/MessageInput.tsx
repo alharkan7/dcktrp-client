@@ -28,7 +28,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     };
 
     return (
-        <div className="border-t bg-white dark:bg-slate-950 p-4">
+        <div className="border-t bg-white dark:bg-slate-950 p-4 flex-shrink-0">
             <div className="flex gap-2 max-w-4xl mx-auto">
                 <Input
                     value={message}

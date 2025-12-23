@@ -76,16 +76,10 @@ export default function ChatPage() {
     };
 
     const handleNewConversation = async () => {
-        try {
-            const newConversation = await conversationsApi.createConversation();
-            setConversations([newConversation, ...conversations]);
-            setCurrentConversationId(newConversation.id);
-            setMessages([]);
-            toast.success('New conversation created');
-        } catch (error: any) {
-            console.error('Failed to create conversation:', error);
-            toast.error('Failed to create conversation');
-        }
+        // Don't create conversation yet - let the first message create it with proper title
+        setCurrentConversationId(null);
+        setMessages([]);
+        toast.success('Start typing to begin a new conversation');
     };
 
     const handleSelectConversation = (conversationId: number) => {
@@ -181,16 +175,31 @@ export default function ChatPage() {
                     setStreamingMessage(null);
                 },
                 async () => {
-                    // Streaming complete - finalize UI
-                    setStreamingMessage(null);
+                    // Streaming complete - finalize the message in UI
                     
-                    // Small delay to ensure server has saved messages
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    // Reload conversation list to get updated data
                     if (returnedConversationId) {
-                        await loadConversations();
-                        await loadMessages(returnedConversationId);
+                        // Add the final assistant message to messages array (no DB reload needed!)
+                        const finalAssistantMessage: Message = {
+                            id: Date.now() + 1, // Temporary ID until DB reload on conversation switch
+                            conversation_id: returnedConversationId,
+                            role: 'assistant',
+                            content: fullResponse,
+                            created_at: new Date().toISOString(),
+                            metadata: {},
+                        };
+                        
+                        // Update messages with the complete assistant response
+                        setMessages((prev) => [...prev, finalAssistantMessage]);
+                        setStreamingMessage(null);
+                        
+                        // If a new conversation was created, refresh the sidebar to show it
+                        // This updates conversation list title and timestamp without reloading messages
+                        if (!conversationId) {
+                            await loadConversations();
+                        }
+                    } else {
+                        // No conversation created, just clear streaming message
+                        setStreamingMessage(null);
                     }
                 }
             );
@@ -204,7 +213,7 @@ export default function ChatPage() {
 
     return (
         <ProtectedRoute>
-            <div className="flex h-screen overflow-hidden">
+            <div className="flex h-screen max-h-screen overflow-hidden">
                 <ConversationSidebar
                     conversations={conversations}
                     currentConversationId={currentConversationId}
@@ -213,9 +222,9 @@ export default function ChatPage() {
                     onDeleteConversation={handleDeleteConversation}
                     isLoading={isLoadingConversations}
                 />
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-950">
+                <div className="flex-1 flex flex-col bg-white dark:bg-slate-950 min-h-0">
                     {/* Header with settings */}
-                    <div className="border-b px-4 py-3 flex items-center justify-between bg-white dark:bg-slate-950">
+                    <div className="border-b px-4 py-3 flex items-center justify-between bg-white dark:bg-slate-950 flex-shrink-0">
                         <h1 className="text-lg font-semibold">
                             {currentConversationId
                                 ? conversations.find((c) => c.id === currentConversationId)?.title || 'Chat'

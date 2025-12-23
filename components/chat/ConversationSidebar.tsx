@@ -43,8 +43,8 @@ export default function ConversationSidebar({
     };
 
     return (
-        <div className="w-80 border-r bg-slate-50 dark:bg-slate-900 flex flex-col h-screen">
-            <div className="p-4 space-y-4">
+        <div className="w-80 border-r bg-slate-50 dark:bg-slate-900 flex flex-col h-full min-h-0">
+            <div className="p-4 space-y-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                         Chat Testing
@@ -62,7 +62,7 @@ export default function ConversationSidebar({
 
             <Separator />
 
-            <ScrollArea className="flex-1 px-2">
+            <ScrollArea className="flex-1 min-h-0 px-2">
                 <div className="space-y-1 py-2">
                     {conversations.length === 0 ? (
                         <div className="text-center py-8 px-4 text-gray-500 dark:text-gray-400">
@@ -108,9 +108,9 @@ export default function ConversationSidebar({
                 </div>
             </ScrollArea>
 
-            <Separator />
+            <Separator className="flex-shrink-0" />
 
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 flex-shrink-0">
                 {user && (
                     <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white dark:bg-slate-800">
                         <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-semibold">

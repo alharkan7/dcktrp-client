@@ -34,9 +34,10 @@ export interface ChatSettings {
 interface ChatSettingsProps {
     settings: ChatSettings;
     onSettingsChange: (settings: ChatSettings) => void;
+    hasAttachments?: boolean;
 }
 
-export default function ChatSettingsPanel({ settings, onSettingsChange }: ChatSettingsProps) {
+export default function ChatSettingsPanel({ settings, onSettingsChange, hasAttachments = false }: ChatSettingsProps) {
     const [open, setOpen] = useState(false);
 
     const updateSetting = <K extends keyof ChatSettings>(
@@ -58,8 +59,11 @@ export default function ChatSettingsPanel({ settings, onSettingsChange }: ChatSe
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="flex-shrink-0">
+                <Button variant="ghost" size="icon" className="flex-shrink-0 relative">
                     <Settings className="h-5 w-5" />
+                    {hasAttachments && (
+                        <div className="absolute top-1 right-1 h-2 w-2 bg-blue-500 rounded-full" />
+                    )}
                 </Button>
             </SheetTrigger>
             <SheetContent className="w-[400px] sm:w-[540px] flex flex-col p-0">
@@ -76,10 +80,11 @@ export default function ChatSettingsPanel({ settings, onSettingsChange }: ChatSe
                         <div className="space-y-2">
                             <Label>Query Mode</Label>
                             <Select
-                                value={settings.mode}
+                                value={hasAttachments ? 'bypass' : settings.mode}
                                 onValueChange={(value) => updateSetting('mode', value as ChatSettings['mode'])}
+                                disabled={hasAttachments}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className={hasAttachments ? 'opacity-60' : ''}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -91,9 +96,15 @@ export default function ChatSettingsPanel({ settings, onSettingsChange }: ChatSe
                                     <SelectItem value="bypass">Bypass</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-gray-500">
-                                Mix mode combines local and global search for best results
-                            </p>
+                            {hasAttachments ? (
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                    ⓘ File attachments require bypass mode (direct LLM processing)
+                                </p>
+                            ) : (
+                                <p className="text-xs text-gray-500">
+                                    Mix mode combines local and global search for best results
+                                </p>
+                            )}
                         </div>
 
                         {/* Local K */}

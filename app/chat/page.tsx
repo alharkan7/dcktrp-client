@@ -19,6 +19,7 @@ export default function ChatPage() {
     const [isLoadingConversations, setIsLoadingConversations] = useState(true);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const [hasAttachments, setHasAttachments] = useState(false);
 
     // Chat settings state
     const [settings, setSettings] = useState<ChatSettings>({
@@ -103,12 +104,14 @@ export default function ChatPage() {
         }
     };
 
-    const handleSendMessage = async (content: string) => {
+    const handleSendMessage = async (content: string, files?: File[]) => {
+        // Update hasAttachments state
+        setHasAttachments(false);
         // Server will auto-create conversation if needed
-        await sendMessage(currentConversationId, content);
+        await sendMessage(currentConversationId, content, files);
     };
 
-    const sendMessage = async (conversationId: number | null, content: string) => {
+    const sendMessage = async (conversationId: number | null, content: string, files?: File[]) => {
         try {
             setIsSending(true);
 
@@ -141,7 +144,8 @@ export default function ChatPage() {
             await chatApi.streamQuery(
                 {
                     query: content,
-                    mode: settings.mode,
+                    // Force bypass mode when files are attached (multimodal content only works in bypass mode)
+                    mode: files && files.length > 0 ? 'bypass' : settings.mode,
                     stream: true,
                     include_references: settings.include_references,
                     local_k: settings.local_k,
@@ -160,7 +164,7 @@ export default function ChatPage() {
                         returnedConversationId = chunk.conversation_id;
                         setCurrentConversationId(chunk.conversation_id);
                     }
-                    
+
                     if (chunk.response) {
                         fullResponse += chunk.response;
                         setStreamingMessage({
@@ -176,7 +180,7 @@ export default function ChatPage() {
                 },
                 async () => {
                     // Streaming complete - finalize the message in UI
-                    
+
                     if (returnedConversationId) {
                         // Add the final assistant message to messages array (no DB reload needed!)
                         const finalAssistantMessage: Message = {
@@ -187,11 +191,11 @@ export default function ChatPage() {
                             created_at: new Date().toISOString(),
                             metadata: {},
                         };
-                        
+
                         // Update messages with the complete assistant response
                         setMessages((prev) => [...prev, finalAssistantMessage]);
                         setStreamingMessage(null);
-                        
+
                         // If a new conversation was created, refresh the sidebar to show it
                         // This updates conversation list title and timestamp without reloading messages
                         if (!conversationId) {
@@ -201,7 +205,8 @@ export default function ChatPage() {
                         // No conversation created, just clear streaming message
                         setStreamingMessage(null);
                     }
-                }
+                },
+                files // Pass files to API
             );
         } catch (error: any) {
             console.error('Failed to send message:', error);
@@ -230,7 +235,11 @@ export default function ChatPage() {
                                 ? conversations.find((c) => c.id === currentConversationId)?.title || 'Chat'
                                 : 'New Chat'}
                         </h1>
-                        <ChatSettingsPanel settings={settings} onSettingsChange={setSettings} />
+                        <ChatSettingsPanel
+                            settings={settings}
+                            onSettingsChange={setSettings}
+                            hasAttachments={hasAttachments}
+                        />
                     </div>
 
                     <MessageList
@@ -238,7 +247,11 @@ export default function ChatPage() {
                         isLoading={isLoadingMessages}
                         streamingMessage={streamingMessage}
                     />
-                    <MessageInput onSend={handleSendMessage} disabled={isSending} />
+                    <MessageInput
+                        onSend={handleSendMessage}
+                        disabled={isSending}
+                        onAttachmentsChange={setHasAttachments}
+                    />
                 </div>
             </div>
         </ProtectedRoute>

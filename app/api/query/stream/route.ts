@@ -5,16 +5,33 @@ export async function POST(request: NextRequest) {
 
     try {
         const authHeader = request.headers.get('authorization');
-        const body = await request.text();
+        const userIdHeader = request.headers.get('x-user-id');
+        const apiKeyHeader = request.headers.get('x-api-key');
+        const contentType = request.headers.get('content-type');
+
+        let body: string | FormData;
+        const headers: Record<string, string> = {
+            'Authorization': authHeader || '',
+            ...(userIdHeader ? { 'X-User-ID': userIdHeader } : {}),
+            ...(apiKeyHeader ? { 'X-API-Key': apiKeyHeader } : {}),
+        };
+
+        // Check if this is a FormData request (file upload)
+        if (contentType?.includes('multipart/form-data')) {
+            // For FormData, we need to pass it through directly
+            body = await request.formData();
+            // Don't set Content-Type for FormData - fetch will handle it with boundary
+        } else {
+            // For JSON requests
+            body = await request.text();
+            headers['Content-Type'] = 'application/json';
+        }
 
         // Forward to backend
         const response = await fetch(`${backendUrl}/query/stream`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader || '',
-            },
-            body: body,
+            headers,
+            body,
         });
 
         // Return the streaming response as-is

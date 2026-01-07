@@ -35,6 +35,7 @@ export default function ChatConversationPage() {
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [hasAttachments, setHasAttachments] = useState(false);
+    const [skipNextLoad, setSkipNextLoad] = useState(false); // Flag to skip message reload after sending
 
     // Chat settings state
     const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
@@ -47,13 +48,22 @@ export default function ChatConversationPage() {
     }, [conversationIdFromUrl]);
 
     // Load messages when conversation changes
+    // NOTE: We deliberately do NOT include 'conversations' in dependencies to avoid
+    // unnecessary message reloads when the conversation list updates (e.g., after sending a message).
+    // This prevents flickering and maintains the optimistic UI updates.
     useEffect(() => {
+        if (skipNextLoad) {
+            // Skip this load and reset the flag
+            setSkipNextLoad(false);
+            return;
+        }
+        
         if (currentConversationId) {
             loadMessages(currentConversationId);
         } else {
             setMessages([]);
         }
-    }, [currentConversationId, conversations]);
+    }, [currentConversationId, skipNextLoad]); // Only reload when conversation ID changes
 
     // Check if conversation exists when conversations load
     useEffect(() => {
@@ -222,6 +232,9 @@ export default function ChatConversationPage() {
                         // Handle new conversation created from this page (shouldn't happen often)
                         if (!conversationId && returnedConversationId) {
                             setCurrentConversationId(returnedConversationId);
+                            // Set flag to skip the automatic message reload
+                            // since we already have the messages in state from optimistic update
+                            setSkipNextLoad(true);
                             router.push(`/chat/${returnedConversationId}`, { scroll: false });
 
                             // Fetch and add new conversation

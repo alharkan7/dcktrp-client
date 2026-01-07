@@ -13,6 +13,15 @@ import { useConversations } from '@/contexts/ConversationsContext';
 import { Message } from '@/types';
 import { toast } from 'sonner';
 
+const DEFAULT_SETTINGS: ChatSettings = {
+    mode: 'global',
+    local_k: 5,
+    global_k: 10,
+    include_references: true,
+    division_filter: [],
+    access_filter: ['external'],
+};
+
 export default function ChatConversationPage() {
     const params = useParams();
     const router = useRouter();
@@ -28,14 +37,7 @@ export default function ChatConversationPage() {
     const [hasAttachments, setHasAttachments] = useState(false);
 
     // Chat settings state
-    const [settings, setSettings] = useState<ChatSettings>({
-        mode: 'global',
-        local_k: 5,
-        global_k: 10,
-        include_references: true,
-        division_filter: [],
-        access_filter: ['external'],
-    });
+    const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
 
     // Sync URL with conversation ID
     useEffect(() => {
@@ -76,7 +78,13 @@ export default function ChatConversationPage() {
             // Load conversation settings from metadata
             const conversation = conversations.find(c => c.id === conversationId);
             if (conversation?.metadata?.chatSettings) {
-                setSettings(conversation.metadata.chatSettings);
+                setSettings({
+                    ...DEFAULT_SETTINGS,
+                    ...conversation.metadata.chatSettings
+                });
+            } else {
+                // Reset to default settings if none saved
+                setSettings(DEFAULT_SETTINGS);
             }
         } catch (error: any) {
             console.error('Failed to load messages:', error);

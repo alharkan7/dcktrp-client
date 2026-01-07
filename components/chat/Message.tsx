@@ -8,6 +8,9 @@ import ReactMarkdown from 'react-markdown';
 import { FileText, Image as ImageIcon } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { toast } from 'sonner';
+import { chatApi } from '@/lib/api/chat';
+
 interface MessageProps {
     message: MessageType;
     isStreaming?: boolean;
@@ -17,6 +20,7 @@ interface FileAttachment {
     type: 'image' | 'pdf';
     name: string;
     displayText?: string;
+    gcsPath?: string;
 }
 
 export default function Message({ message, isStreaming }: MessageProps) {
@@ -57,12 +61,20 @@ export default function Message({ message, isStreaming }: MessageProps) {
         // Also include fileMetadata from database (if available)
         if (message.fileMetadata && message.fileMetadata.length > 0) {
             message.fileMetadata.forEach(file => {
-                // Only add if not already extracted from content
-                const alreadyExists = attachments.some(a => a.name === file.name);
-                if (!alreadyExists) {
+                // Find if this file is already in attachments (by name)
+                const existingIndex = attachments.findIndex(a => a.name === file.name);
+
+                if (existingIndex !== -1) {
+                    // Update existing with GCS path if available
+                    if (file.gcs_path) {
+                        attachments[existingIndex].gcsPath = file.gcs_path;
+                    }
+                } else {
+                    // Add new attachment
                     attachments.push({
                         type: file.type.startsWith('image/') ? 'image' : 'pdf',
-                        name: file.name
+                        name: file.name,
+                        gcsPath: file.gcs_path
                     });
                 }
             });
@@ -70,6 +82,22 @@ export default function Message({ message, isStreaming }: MessageProps) {
 
         return { cleanContent: cleanContent.trim(), attachments };
     }, [message.content, message.fileMetadata]);
+
+    const handleFileClick = async (attachment: FileAttachment) => {
+        if (!attachment.gcsPath) {
+            // For older files without GCS path, just show toast
+            // toast.info(`File "${attachment.name}" is not available for download`);
+            return;
+        }
+
+        try {
+            const url = await chatApi.getFileSignedUrl(attachment.gcsPath);
+            window.open(url, '_blank');
+        } catch (error) {
+            console.error('Failed to open file:', error);
+            toast.error("Failed to open file");
+        }
+    };
 
     return (
         <div
@@ -101,12 +129,15 @@ export default function Message({ message, isStreaming }: MessageProps) {
                         {attachments.map((attachment, index) => (
                             <div
                                 key={index}
+                                onClick={() => handleFileClick(attachment)}
                                 className={cn(
-                                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm max-w-[280px]',
+                                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm max-w-[280px] transition-colors',
+                                    attachment.gcsPath ? 'cursor-pointer hover:opacity-80' : 'cursor-default',
                                     isUser
                                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
                                         : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
                                 )}
+                                title={attachment.gcsPath ? "Click to open file" : undefined}
                             >
                                 {attachment.type === 'image' ? (
                                     <ImageIcon className="h-4 w-4 flex-shrink-0" />

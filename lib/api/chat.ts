@@ -115,4 +115,36 @@ export const chatApi = {
             onError(errorMessage);
         }
     },
+
+    /**
+     * Get a signed URL for downloading a file from GCS storage
+     * The signed URL is temporary and expires after the specified time
+     */
+    async getFileSignedUrl(gcsPath: string, expirationMinutes: number = 60): Promise<string> {
+        const userId = storage.getUserId();
+        const apiKey = process.env.NEXT_PUBLIC_RAGSYSTEM_API_KEY || '';
+
+        const params = new URLSearchParams({
+            gcs_path: gcsPath,
+            expiration_minutes: expirationMinutes.toString(),
+        });
+
+        const response = await fetch(
+            `${getBackendUrl()}/files/signed-url?${params.toString()}`,
+            {
+                method: 'GET',
+                headers: {
+                    ...(userId ? { 'X-User-ID': userId } : {}),
+                    ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+                },
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to get signed URL: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.url;
+    },
 };

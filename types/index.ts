@@ -29,6 +29,9 @@ export interface Message {
     name: string;
     type: string;
     size?: number;
+    // GCS storage fields (for downloadable files)
+    file_id?: string;
+    gcs_path?: string;
   }>;
 }
 
